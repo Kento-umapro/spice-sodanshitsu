@@ -368,6 +368,9 @@ const NAME = { kaicho: '西牧会長', shacho: '諸沢社長' };
    ローカルサーバを経由せず、ブラウザから直接 Anthropic API を呼ぶ。
    APIキーは右上の歯車から入力（このブラウザのみに保存）。       */
 const DIRECT = typeof window.PROMPTS === 'object' && window.PROMPTS !== null;
+/* 中継サーバ（Cloudflare Worker）が設定されていれば、APIキーの代わりに
+   合言葉（x-access-code）を送る。キーは中継サーバだけが持つ。 */
+const RELAY = (typeof window.RELAY_URL === 'string' && window.RELAY_URL) || '';
 
 function buildSystemDirect(){
   const p = window.PROMPTS;
@@ -391,14 +394,17 @@ function buildSystemDirect(){
 }
 
 function directRequest(){
-  return fetch('https://api.anthropic.com/v1/messages', {
+  const headers = { 'content-type':'application/json' };
+  if (RELAY) {
+    headers['x-access-code'] = S.key;   // 合言葉。キーは中継サーバが持つ
+  } else {
+    headers['x-api-key'] = S.key;
+    headers['anthropic-version'] = '2023-06-01';
+    headers['anthropic-dangerous-direct-browser-access'] = 'true';
+  }
+  return fetch(RELAY || 'https://api.anthropic.com/v1/messages', {
     method:'POST',
-    headers:{
-      'content-type':'application/json',
-      'x-api-key':S.key,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true',
-    },
+    headers,
     body: JSON.stringify({
       model:'claude-opus-5',
       max_tokens:4000,
@@ -622,7 +628,13 @@ async function send(text){
 
 function errorCard(status, info){
   if (info.error === 'no_api_key')
-    return '<div class="error">APIキーが設定されていません。右上の歯車から入力してください。</div>';
+    return RELAY
+      ? '<div class="error">合言葉が設定されていません。右上の歯車から入力してください。</div>'
+      : '<div class="error">APIキーが設定されていません。右上の歯車から入力してください。</div>';
+  if (info.error === 'bad_code')
+    return '<div class="error">合言葉が違うようです。右上の歯車から入れ直してください。</div>';
+  if (info.error === 'no_api_key_on_server')
+    return '<div class="error">サーバ側のAPIキーが未設定です。管理者に連絡してください。</div>';
   if (status === 401)
     return '<div class="error">APIキーが正しくないようです。右上の歯車から入れ直してください。</div>';
   if (status === 429)
@@ -669,6 +681,13 @@ input.addEventListener('keydown', (e) => {
 });
 
 const dlg = $('#dlg');
+if (DIRECT && RELAY) {
+  // 中継サーバ版: APIキーではなく合言葉を入れてもらう
+  document.querySelector('label[for="key"]').textContent = '合言葉';
+  $('#key').placeholder = '共有された合言葉';
+  document.querySelector('.dlg .lead').textContent = '合言葉はこのブラウザにだけ保存されます。APIキーの入力は不要です。';
+  document.querySelector('.dlg .hint').textContent = '合言葉はお店の責任者から共有されます。';
+}
 $('#btn-settings').addEventListener('click', () => { $('#key').value = S.key; dlg.showModal(); checkHealth(); });
 $('#dlg-close').addEventListener('click', () => dlg.close());
 $('#dlg-save').addEventListener('click', () => {
@@ -682,7 +701,9 @@ async function checkHealth(){
   if (DIRECT) {
     const ready = Boolean(S.key);
     dot.className = 'dot ' + (ready ? 'ok' : 'ng');
-    txt.textContent = ready ? '接続OK — claude-opus-5（このブラウザのキー）' : 'APIキー未設定';
+    txt.textContent = RELAY
+      ? (ready ? '接続OK — 中継サーバ経由（キー入力は不要）' : '合言葉が未設定')
+      : (ready ? '接続OK — claude-opus-5（このブラウザのキー）' : 'APIキー未設定');
     return;
   }
   try {
