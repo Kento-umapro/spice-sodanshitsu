@@ -166,8 +166,11 @@ main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18
   letter-spacing:.09em; color:var(--brand-deep);
   background:var(--brand-wash); border-radius:999px; padding:4px 13px;
 }
-/* 1行に1つずつ縦に並べる。行数が常に同じになり、入れ替えボタンの位置が動かない */
-.chips{display:flex; flex-direction:column; align-items:center; gap:7px; margin-top:22px}
+/* 1行に1つずつ縦に並べる。入れ替えボタンは右上に縦書きで固定 */
+.chips{
+  display:flex; flex-direction:column; align-items:center; gap:7px; margin-top:22px;
+  position:relative; padding:0 46px;
+}
 .chip{
   background:var(--brand-wash); color:var(--brand-deep); border-radius:999px;
   padding:7px 15px; font-size:12.5px; font-weight:600; transition:.13s;
@@ -175,8 +178,11 @@ main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18
 }
 .chip:hover{background:var(--brand); color:#fff}
 .chip.reroll{
+  position:absolute; top:0; right:2px;
+  writing-mode:vertical-rl;
   background:transparent; border:1.5px dashed var(--brand); color:var(--brand);
-  font-weight:700;
+  font-weight:700; font-size:11px; letter-spacing:.14em;
+  padding:13px 6px; white-space:nowrap; overflow:visible; text-overflow:clip;
 }
 .chip.reroll:hover{background:var(--brand-wash); color:var(--brand-deep)}
 
@@ -581,7 +587,7 @@ function renderChips(){
   const show = picked.slice(0, S.mode === 'chat' ? 5 : 4);
   $('#chips').innerHTML =
     show.map(t => `<button class="chip" type="button">${t}</button>`).join('') +
-    '<button class="chip reroll" type="button">↻ ほかの質問を見る</button>';
+    '<button class="chip reroll" type="button" aria-label="質問を入れ替える">↻ 入れ替え</button>';
   $('#chips').querySelectorAll('.chip:not(.reroll)').forEach(b =>
     b.addEventListener('click', () => { input.value = b.textContent; resize(); input.focus(); }));
   $('#chips').querySelector('.reroll').addEventListener('click', renderChips);
