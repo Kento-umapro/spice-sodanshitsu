@@ -681,29 +681,50 @@ function tidy(t){ return t.replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n'); 
    歩幅を広げて追いつく。                                        */
 function typewriter(bubble){
   let target = '', shown = 0, done = false, resolveDone = null;
-  const timer = setInterval(() => {
+  let stopped = false, last = performance.now();
+
+  function complete(){
+    if (stopped) return;
+    stopped = true;
+    clearInterval(hiddenTimer);
+    bubble.textContent = target;
+    scroll();
+    if (resolveDone) resolveDone();
+  }
+
+  // 描画フレームに同期して、小数単位で文字数を進める（毎フレーム1〜2文字＝なめらか）
+  function frame(now){
+    if (stopped) return;
+    const dt = Math.min((now - last) / 1000, 0.1);
+    last = now;
     if (shown < target.length) {
-      if (document.hidden) {
-        // 裏のタブではタイマーが間引かれて進まなくなるので、一気に表示する
-        shown = target.length;
-      } else {
-        const behind = target.length - shown;
-        const step = behind > 300 ? 24 : behind > 100 ? 8 : behind > 30 ? 4 : 2;
-        shown = Math.min(target.length, shown + (done ? Math.max(step, 10) : step));
-      }
-      bubble.textContent = target.slice(0, shown);
+      const behind = target.length - shown;
+      // 遅れの量に比例して速度を連続的に変える（段差を作らない）
+      const rate = Math.max(50, Math.min(900, behind * (done ? 8 : 3.5)));
+      shown = Math.min(target.length, shown + rate * dt);
+      bubble.textContent = target.slice(0, Math.floor(shown));
       scroll(true);
     } else if (done) {
-      clearInterval(timer);
-      bubble.textContent = target;
-      scroll();
-      if (resolveDone) resolveDone();
+      complete();
+      return;
     }
-  }, 20);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+
+  // 裏のタブでは描画フレームが止まるため、こちらで一気に表示して締める
+  const hiddenTimer = setInterval(() => {
+    if (document.hidden && target) {
+      shown = target.length;
+      bubble.textContent = target;
+      if (done) complete();
+    }
+  }, 400);
+
   return {
     update(t){ target = t; },
-    finish(t){ target = t; done = true; return new Promise(r => { resolveDone = r; }); },
-    cancel(){ clearInterval(timer); },
+    finish(t){ target = t; done = true; return new Promise(r => { resolveDone = r; if (stopped) r(); }); },
+    cancel(){ stopped = true; clearInterval(hiddenTimer); },
   };
 }
 
