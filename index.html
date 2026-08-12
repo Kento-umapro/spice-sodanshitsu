@@ -530,10 +530,37 @@ function addRaw(html){
   scroll();
 }
 
-function scroll(){ requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' })); }
+function scroll(instant){ requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior: instant ? 'auto' : 'smooth' })); }
 
 /* 会長は改行を多用する文体なので、空行が続きすぎたら1行にまとめる */
 function tidy(t){ return t.replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n'); }
+
+/* ══ タイプライター表示 ═══════════════════════════════════════
+   通信は塊で届くのでそのまま出すとカクつく。届いた文字をいったん
+   貯めて、一定のリズムで少しずつ表示する。遅れが溜まったときだけ
+   歩幅を広げて追いつく。                                        */
+function typewriter(bubble){
+  let target = '', shown = 0, done = false, resolveDone = null;
+  const timer = setInterval(() => {
+    if (shown < target.length) {
+      const behind = target.length - shown;
+      const step = behind > 400 ? 20 : behind > 150 ? 6 : behind > 50 ? 2 : 1;
+      shown = Math.min(target.length, shown + step);
+      bubble.textContent = target.slice(0, shown);
+      scroll(true);
+    } else if (done) {
+      clearInterval(timer);
+      bubble.textContent = target;
+      scroll();
+      if (resolveDone) resolveDone();
+    }
+  }, 30);
+  return {
+    update(t){ target = t; },
+    finish(t){ target = t; done = true; return new Promise(r => { resolveDone = r; }); },
+    cancel(){ clearInterval(timer); },
+  };
+}
 
 function resize(){
   input.style.height = 'auto';
@@ -560,6 +587,7 @@ async function send(text){
   const bubble = addMessage(guess, '');
   bubble.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
   const wrap = bubble.closest('.msg');
+  let tw = null;
 
   try {
     let res;
@@ -587,7 +615,6 @@ async function send(text){
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = '', full = '', tagged = false;
-    bubble.textContent = '';
 
     for (;;) {
       const { done, value } = await reader.read();
@@ -616,14 +643,20 @@ async function send(text){
             tagged = true;
           }
         }
-        if (tagged) { bubble.textContent = tidy(full); scroll(); }
+        if (tagged) {
+          if (!tw) { bubble.textContent = ''; tw = typewriter(bubble); }
+          tw.update(tidy(full));
+        }
       }
     }
 
-    bubble.textContent = tidy(full).trim();
-    S.history.push({ role:'assistant', content: tidy(full).trim() });
+    const finalText = tidy(full).trim();
+    if (tw) await tw.finish(finalText);
+    else bubble.textContent = finalText;
+    S.history.push({ role:'assistant', content: finalText });
 
   } catch (err) {
+    if (tw) tw.cancel();
     wrap.remove();
     addRaw(`<div class="error">通信に失敗しました。サーバが起動しているか確認してください。<br><code>${String(err)}</code></div>`);
     S.history.pop();
