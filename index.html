@@ -738,9 +738,16 @@ async function send(text){
     let res;
     if (DIRECT) {
       if (!S.key) {
+        // 質問を取り下げて合言葉画面へ。通過後に同じ質問を自動で送り直す
         wrap.remove(); S.history.pop();
-        if (RELAY && window.showGate) window.showGate();
-        else addRaw(errorCard(400, { error:'no_api_key' }));
+        const meMsg = [...log.querySelectorAll('.msg.me')].pop();
+        if (meMsg) meMsg.remove();
+        if (RELAY && window.showGate) {
+          window.__pendingText = text;
+          window.showGate();
+        } else {
+          addRaw(errorCard(400, { error:'no_api_key' }));
+        }
         return;
       }
       res = await directRequest();
@@ -757,8 +764,11 @@ async function send(text){
       const info = await res.json().catch(() => ({}));
       wrap.remove();
       if (RELAY && info.error === 'bad_code') {
-        // 合言葉が変更された等。保存を消して、もう一度ロック画面へ
+        // 合言葉が変更された等。保存を消して、もう一度ロック画面へ（質問は通過後に自動再送）
         S.key = ''; localStorage.removeItem('pocket_key');
+        const meMsg = [...log.querySelectorAll('.msg.me')].pop();
+        if (meMsg) meMsg.remove();
+        window.__pendingText = text;
         if (window.showGate) window.showGate();
       } else {
         addRaw(errorCard(res.status, info));
@@ -997,6 +1007,10 @@ if (DIRECT && RELAY) {
         S.key = code;
         localStorage.setItem('pocket_key', code);  // この端末に保存。次回からは聞かれない
         gate.hidden = true;
+        // 合言葉画面が出る前に送ろうとしていた質問があれば、自動で送り直す
+        const pending = window.__pendingText;
+        window.__pendingText = null;
+        if (pending) send(pending);
       } else {
         $('#gate-err').textContent = '合言葉が違うようです。もう一度確かめてください。';
         $('#gate-err').hidden = false;
