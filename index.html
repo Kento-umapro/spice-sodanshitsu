@@ -737,6 +737,13 @@ function resize(){
 /* ══ 送信 ══════════════════════════════════════════════════ */
 async function send(text){
   if (S.busy) return;
+  // 合言葉が未入力なら、画面には何も出さずにロック画面へ（通過後に自動送信）
+  if (DIRECT && RELAY && !S.key) {
+    window.__pendingText = text;
+    input.value = ''; resize();
+    if (window.showGate) window.showGate();
+    return;
+  }
   addMessage('me', text);
   S.history.push({ role:'user', content:text });
   input.value = ''; resize();
@@ -759,16 +766,8 @@ async function send(text){
     let res;
     if (DIRECT) {
       if (!S.key) {
-        // 質問を取り下げて合言葉画面へ。通過後に同じ質問を自動で送り直す
         wrap.remove(); S.history.pop();
-        const meMsg = [...log.querySelectorAll('.msg.me')].pop();
-        if (meMsg) meMsg.remove();
-        if (RELAY && window.showGate) {
-          window.__pendingText = text;
-          window.showGate();
-        } else {
-          addRaw(errorCard(400, { error:'no_api_key' }));
-        }
+        addRaw(errorCard(400, { error:'no_api_key' }));
         return;
       }
       res = await directRequest();
