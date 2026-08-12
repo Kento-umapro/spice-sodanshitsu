@@ -575,8 +575,8 @@ function typewriter(bubble){
         shown = target.length;
       } else {
         const behind = target.length - shown;
-        const step = behind > 400 ? 20 : behind > 150 ? 6 : behind > 50 ? 2 : 1;
-        shown = Math.min(target.length, shown + (done ? Math.max(step, 6) : step));
+        const step = behind > 300 ? 24 : behind > 100 ? 8 : behind > 30 ? 4 : 2;
+        shown = Math.min(target.length, shown + (done ? Math.max(step, 10) : step));
       }
       bubble.textContent = target.slice(0, shown);
       scroll(true);
@@ -586,7 +586,7 @@ function typewriter(bubble){
       scroll();
       if (resolveDone) resolveDone();
     }
-  }, 30);
+  }, 20);
   return {
     update(t){ target = t; },
     finish(t){ target = t; done = true; return new Promise(r => { resolveDone = r; }); },
