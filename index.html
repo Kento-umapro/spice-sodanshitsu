@@ -290,6 +290,32 @@ textarea::placeholder{color:var(--ink-3)}
 }
 .note b{color:var(--brand); font-weight:800; letter-spacing:.06em}
 
+/* ══ 合言葉画面（初回のみ） ══════════════════════════════════ */
+#gate{
+  position:fixed; inset:0; z-index:100; background:var(--paper);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+}
+#gate[hidden]{display:none}
+.gatecard{
+  background:var(--surface); border-radius:20px; box-shadow:var(--shadow);
+  padding:34px 28px; max-width:360px; width:100%; text-align:center;
+}
+.gatecard .gmark{font-size:22px; font-weight:800; letter-spacing:-.02em}
+.gatecard .gmark em{font-style:normal; color:var(--brand)}
+.gatecard .glead{font-size:12.5px; color:var(--ink-2); margin:12px 0 20px; line-height:1.8}
+.gatecard input{
+  width:100%; font:inherit; font-size:16px; text-align:center; letter-spacing:.08em;
+  padding:11px 14px; border-radius:12px; border:1.5px solid var(--line);
+  background:var(--surface-2); color:var(--ink);
+}
+.gatecard input:focus{outline:none; border-color:var(--brand)}
+.gatecard button{
+  width:100%; margin-top:11px; padding:12px; border-radius:12px;
+  background:var(--brand); color:#fff; font-weight:700; font-size:14.5px;
+}
+.gatecard button:hover{background:var(--brand-deep)}
+.gatecard .gerr{font-size:12px; color:var(--brand); margin:12px 0 0; font-weight:600}
+
 /* ══ 設定 ══════════════════════════════════════════════════ */
 dialog{
   border:none; border-radius:18px; padding:0; max-width:420px; width:calc(100% - 32px);
@@ -384,6 +410,19 @@ dialog::backdrop{background:rgba(40,10,8,.5)}
     </form>
     <p class="note"><b>GO☆FIGHT☆WIN！</b></p>
   </footer>
+</div>
+
+<!-- 初回だけ表示する合言葉画面（中継サーバ版のみ）。一度通れば端末に保存され、二度と出ない -->
+<div id="gate" hidden>
+  <div class="gatecard">
+    <span class="gmark"><em>スパイス</em>相談室</span>
+    <p class="glead">はじめて開く端末では、合言葉が必要です。<br>一度入れれば、次からは何も聞かれません。</p>
+    <form id="gate-form">
+      <input id="gate-code" type="text" placeholder="合言葉" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <button type="submit" id="gate-go">はじめる</button>
+    </form>
+    <p class="gerr" id="gate-err" hidden>合言葉が違うようです。もう一度確かめてください。</p>
+  </div>
 </div>
 
 <dialog id="dlg">
@@ -699,7 +738,9 @@ async function send(text){
     let res;
     if (DIRECT) {
       if (!S.key) {
-        wrap.remove(); addRaw(errorCard(400, { error:'no_api_key' })); S.history.pop();
+        wrap.remove(); S.history.pop();
+        if (RELAY && window.showGate) window.showGate();
+        else addRaw(errorCard(400, { error:'no_api_key' }));
         return;
       }
       res = await directRequest();
@@ -714,7 +755,15 @@ async function send(text){
 
     if (!res.ok) {
       const info = await res.json().catch(() => ({}));
-      wrap.remove(); addRaw(errorCard(res.status, info)); S.history.pop();
+      wrap.remove();
+      if (RELAY && info.error === 'bad_code') {
+        // 合言葉が変更された等。保存を消して、もう一度ロック画面へ
+        S.key = ''; localStorage.removeItem('pocket_key');
+        if (window.showGate) window.showGate();
+      } else {
+        addRaw(errorCard(res.status, info));
+      }
+      S.history.pop();
       return;
     }
 
@@ -925,11 +974,40 @@ input.addEventListener('keydown', (e) => {
 
 const dlg = $('#dlg');
 if (DIRECT && RELAY) {
-  // 中継サーバ版: APIキーではなく合言葉を入れてもらう
-  document.querySelector('label[for="key"]').textContent = '合言葉';
-  $('#key').placeholder = '共有された合言葉';
-  document.querySelector('.dlg .lead').textContent = '合言葉はこのブラウザにだけ保存されます。';
-  document.querySelector('.dlg .hint').textContent = '合言葉はお店の責任者から共有されます。';
+  // 中継サーバ版: 合言葉は初回のロック画面だけで入れる。設定（歯車）は出さない
+  $('#btn-settings').style.display = 'none';
+  const gate = $('#gate');
+  const showGate = () => {
+    gate.hidden = false;
+    $('#gate-err').hidden = true;
+    setTimeout(() => $('#gate-code').focus(), 60);
+  };
+  window.showGate = showGate;
+  if (!S.key) showGate();
+
+  $('#gate-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const code = $('#gate-code').value.trim();
+    if (!code) return;
+    const btn = $('#gate-go');
+    btn.disabled = true; btn.textContent = '確認中…';
+    try {
+      const r = await fetch(RELAY + '/check', { method:'POST', headers:{ 'x-access-code': code } });
+      if (r.ok) {
+        S.key = code;
+        localStorage.setItem('pocket_key', code);  // この端末に保存。次回からは聞かれない
+        gate.hidden = true;
+      } else {
+        $('#gate-err').textContent = '合言葉が違うようです。もう一度確かめてください。';
+        $('#gate-err').hidden = false;
+      }
+    } catch {
+      $('#gate-err').textContent = '通信できませんでした。電波の良いところでもう一度試してください。';
+      $('#gate-err').hidden = false;
+    } finally {
+      btn.disabled = false; btn.textContent = 'はじめる';
+    }
+  });
 }
 $('#btn-settings').addEventListener('click', () => { $('#key').value = S.key; dlg.showModal(); checkHealth(); });
 $('#dlg-close').addEventListener('click', () => dlg.close());
