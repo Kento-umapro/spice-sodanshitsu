@@ -173,6 +173,26 @@ main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18
 }
 .chip:hover{background:var(--brand); color:#fff}
 
+/* ══ 会長の言葉 ═══════════════════════════════════════════ */
+.kotoba{padding:4px 0 20px}
+.kotoba .khead{text-align:center; margin:14px 0 26px}
+.kotoba .khead h1{font-size:20px; font-weight:800; margin:0 0 6px; color:var(--ink)}
+.kotoba .khead p{font-size:12.5px; color:var(--ink-3); margin:0}
+.kotoba section{margin-bottom:28px}
+.kotoba h2{
+  font-size:13px; font-weight:800; color:var(--brand-deep);
+  border-left:4px solid var(--brand); padding-left:10px; margin:0 0 12px;
+}
+.kcard{
+  background:var(--surface-2); border-radius:14px; padding:13px 16px; margin-bottom:9px;
+}
+.kcard h3{font-size:14px; font-weight:700; margin:0 0 5px; color:var(--ink)}
+.kcard p{font-size:13px; line-height:1.75; color:var(--ink-2); margin:0}
+.kcard .ksrc{
+  display:inline-block; margin-top:7px; font-size:10px; font-weight:700;
+  color:var(--brand-deep); background:var(--brand-wash); border-radius:999px; padding:2px 9px;
+}
+
 .msg{display:flex; gap:10px; align-items:flex-start}
 .msg.me{flex-direction:row-reverse}
 .msg .av{width:38px; height:38px; border-radius:50%; flex:none; margin-top:20px; background:#fff; box-shadow:0 0 0 1.5px var(--line)}
@@ -307,6 +327,7 @@ dialog::backdrop{background:rgba(40,10,8,.5)}
     <div class="modes" role="tablist">
       <button class="mode" role="tab" data-mode="chat" aria-selected="true">相談する</button>
       <button class="mode" role="tab" data-mode="praise" aria-selected="false">ほめてもらう</button>
+      <button class="mode" role="tab" data-mode="kotoba" aria-selected="false">会長の言葉</button>
     </div>
   </header>
 
@@ -543,9 +564,14 @@ function typewriter(bubble){
   let target = '', shown = 0, done = false, resolveDone = null;
   const timer = setInterval(() => {
     if (shown < target.length) {
-      const behind = target.length - shown;
-      const step = behind > 400 ? 20 : behind > 150 ? 6 : behind > 50 ? 2 : 1;
-      shown = Math.min(target.length, shown + step);
+      if (document.hidden) {
+        // 裏のタブではタイマーが間引かれて進まなくなるので、一気に表示する
+        shown = target.length;
+      } else {
+        const behind = target.length - shown;
+        const step = behind > 400 ? 20 : behind > 150 ? 6 : behind > 50 ? 2 : 1;
+        shown = Math.min(target.length, shown + (done ? Math.max(step, 6) : step));
+      }
       bubble.textContent = target.slice(0, shown);
       scroll(true);
     } else if (done) {
@@ -681,11 +707,87 @@ function errorCard(status, info){
   return `<div class="error">応答を受け取れませんでした（${status}）。<br><code>${(info.detail || info.error || '').toString().slice(0,200)}</code></div>`;
 }
 
+/* ══ 会長の言葉（勉強会・セミナー・20年のブログから要約） ═══════ */
+const KOTOBA = [
+  { cat:'素直と学び', items:[
+    { t:'素直最強', s:'ブログ', b:'聞くのは恥ずかしい？　恥ずかしいのは一瞬。聞かずに間違え続ける方がずっと恥ずかしい。自分がバカだとわかっているバカは、人に聞くから成長する。' },
+    { t:'弟子入りのすすめ', s:'ブログ', b:'学ぶことは「弟子入り」。大人になるほど弟子入りしづらくなり、目上の人もどんどん減っていく。どんどん弟子入りして、どんどん恥をかくのが若い人の特権。' },
+    { t:'真似から始める', s:'議事録', b:'オリジナルは何もない、全部誰かの真似。できている人の真似を徹底する。先輩に靴を叱られたときは、同じ靴を買って履いていった。' },
+    { t:'賢者は歴史から学ぶ', s:'ブログ', b:'「賢者は歴史から学び、愚者は経験から学ぶ」。この歴史とは、身近な先人のこと。全部自分で経験して学ぶには、人生は短すぎる。' },
+    { t:'1日13分の現実', s:'勉強会', b:'社会人の平均勉強時間は1日13分。半分以上は全く勉強していない。だから、続けるだけで独り勝ちできる。楽に勝てる戦い。' },
+    { t:'YouTubeで20分', s:'ブログ', b:'1日20分、YouTubeで勉強するだけで、全くしない人との差は開くばかり。お金もかからない。' },
+    { t:'勉強は社会に出てからが本番', s:'勉強会', b:'学生時代の成績より、社会に出てから学び続けるかどうかで人生は決まる。勉強会の締めに必ず言う言葉。' },
+  ]},
+  { cat:'目標とお金', items:[
+    { t:'ゴールから逆算する', s:'議事録', b:'20歳で「50歳で3億円持って引退」と決め、45歳・40歳・35歳と逆算した。見る番組も、読む本も、付き合う人も全部変わった。結果、53歳で達成した。' },
+    { t:'努力の総量は変わらない', s:'議事録', b:'人生で費やす努力の総量は、人によって大差ない。その努力をどの時期に配分するかが違うだけ。前半に寄せた人が後半を楽に生きる。' },
+    { t:'大変なのは「想定内」', s:'議事録', b:'目標達成のために大変なのは当たり前だと、事前に想定しておく。だから大変だと感じたことは一度もない。' },
+    { t:'公言する', s:'勉強会', b:'夢や希望は胸に秘めていても叶わない。自分の人生を決めるのは他者。だから希望も夢も人に言う。松井珠理奈さんに会えたアルバイトは、ファンだと公言していた子だけだった。' },
+    { t:'崖っぷちを自分で作る', s:'ブログ', b:'ブログを20年以上ほぼ毎日書き、公言したことを守る。自分を追い込む仕組みは、自分で作る。' },
+    { t:'複利は人類最高の発明', s:'勉強会', b:'月5万円を30年貯金すると1800万円。年5%の複利で運用すると4161万円。アインシュタインが「人類最高の発明」と呼んだ力。' },
+    { t:'基本給2万円の重み', s:'勉強会', b:'基本給が月2万円違うと、生涯賃金では約1000万円の差になる。目先の額ではなく、生涯で考える。' },
+    { t:'老後は計算できる', s:'勉強会', b:'（想定寿命−引退年齢）×12ヶ月×1ヶ月の希望生活費。不安は漠然と抱えるものではなく、計算して備えるもの。' },
+    { t:'4種類の人間', s:'勉強会', b:'社会には「労働者」「使用者」「投資家」「資産家」の4種類がいる。自分がどこを目指すのか。知っているだけで行動が変わる。' },
+  ]},
+  { cat:'仕事の姿勢', items:[
+    { t:'逃げ言葉を使わない', s:'ブログ', b:'「出来る限り」「頑張り」「たい」「思います」。「出来る限り頑張りたいと思います」には逃げ言葉が4つ入っている。全部「解釈」だから逃げられる。' },
+    { t:'人間はウッカリした生き物', s:'ブログ', b:'人間はシッカリした生き物ではない。だから「大丈夫だろう」を撲滅し、「絶対に間違いない」まで確認する。' },
+    { t:'キャパは自分で決める', s:'ブログ', b:'キャパオーバーかどうかは自分で決める。自分ができる範囲は、自分で増やすしかない。56歳でも、まだキャパは広がっている。' },
+    { t:'返信の速さは信用', s:'ブログ', b:'WBCのチケットは、返信が遅い息子ではなく、即返信の友人に回った。返事が早いだけで信用され、チャンスが来る。' },
+    { t:'ミスしたら素直に謝る', s:'ブログ', b:'オンライン会議に7分遅刻した翌朝、4時半に起きてペナルティRUN。ミスは隠さず、素直に認めて、自分でけじめをつける。' },
+    { t:'毎朝の積み重ね', s:'ブログ', b:'毎朝ジョギングをして、全社員の日報に目を通してから出社する。特別なことではなく、決めたことを毎日やる。' },
+  ]},
+  { cat:'幸福度を高める4つの秘訣', items:[
+    { t:'① 相手のために急ぐ', s:'勉強会', b:'空腹の人は気が短い。注文から15秒でカレーを出すことも可能。その速さは「自分のために急いでくれた」という感謝になる。相手を待たせることは、その人の貴重な時間を奪うこと。' },
+    { t:'② 思いやりは「先回り」', s:'勉強会', b:'思いやりとは、相手がしてほしいことをすること。問題が起きてからではなく、起こる前に気づいて動く。倒れる前に、顔色の悪さに気づいて声をかける。' },
+    { t:'③ 感性を磨く', s:'勉強会', b:'AIがマニュアル通りの仕事を代替する時代、マニュアルを超えた瞬間の判断こそ人間の感性。磨くには、多くの人に会い、多様な意見を聞くこと。' },
+    { t:'④ 感謝は態度で示す', s:'勉強会', b:'皿を洗いながらの「ありがとうございました」は失礼。面倒でも、手を止めて、顔を向けて言う。口先ではなく、本気の態度で。' },
+  ]},
+  { cat:'人との関わり', items:[
+    { t:'人生は他者からの選択で決まる', s:'勉強会', b:'採用も、恋愛も、仕事の依頼も、選ぶのは相手。だから第一印象が極めて重要。内定を取る学生と取れない学生の差は、学歴ではなく第一印象。' },
+    { t:'挨拶の3要素', s:'勉強会', b:'①相手の目を見る ②表情を柔らかくする ③体を揺らさず姿勢を正す。目が合ったときに表情を和らげるのは「戦う意思はない」という、DNAに刻まれた合図。' },
+    { t:'一生に1万枚の「はじめまして」', s:'勉強会', b:'営業職なら一生に5千〜1万枚の名刺を配る。一つ一つの挨拶の質が、人生の質を左右する。' },
+    { t:'観察がすべての入口', s:'勉強会', b:'ポットの傾きで残量に気づく。辛いカレーの客に、頼まれる前に水を出す。観察力と思いやりのある人はモテる。' },
+    { t:'信用は30年の複利', s:'議事録', b:'27歳のとき銀行に門前払いされ、2週間粘って600万円を借りた。30年間約束を破らなかった結果、今は電話一本、2日、金利0.95%で7000万円が振り込まれる。' },
+    { t:'マニュアルを超える', s:'勉強会', b:'子供が塗り絵をしやすいようにポットの位置を変えた新人を「イケてんじゃん」と褒めた。ルールを守ることと、自分で考えることは両立する。' },
+  ]},
+  { cat:'生き方', items:[
+    { t:'意志ある者にはチャンスを', s:'ブログ', b:'「勇退されるまで僕を鍛え直して下さい」と言った19歳に、即答で応えた。本気で来る人には、本気で返す。' },
+    { t:'0.01%の一流になる', s:'勉強会', b:'勉強会の締めの言葉。多くの人がやらないことを続けるだけで、そこに近づいていく。' },
+    { t:'親に感謝を伝える', s:'勉強会', b:'一人育てるのに平均4304万円。それだけかけてくれた親に感謝を伝えていないなら、まず伝える。20歳の誕生日に「生んでくれてありがとう」と言えた学生は、泣きながら「今、幸せです」と報告してきた。' },
+    { t:'幸福度は更新できる', s:'議事録', b:'56歳、毎年幸福度を更新し続けている。人生は、後半からでも良くしていける。' },
+    { t:'会社のためではなく、自分のため', s:'議事録', b:'人は自分のためにしか本気で頑張れない。だからこの会社では「会社のために」とは言わない。それが君自身の何の得になるか、で考える。' },
+  ]},
+];
+
+function renderKotoba(){
+  let k = document.getElementById('kotoba');
+  if (!k) {
+    k = document.createElement('div');
+    k.id = 'kotoba'; k.className = 'kotoba';
+    log.appendChild(k);
+  }
+  const total = KOTOBA.reduce((n, s) => n + s.items.length, 0);
+  k.innerHTML =
+    `<div class="khead"><h1>西牧会長の言葉</h1><p>勉強会・セミナー・20年のブログから ${total} の教え</p></div>` +
+    KOTOBA.map(sec =>
+      `<section><h2>${sec.cat}</h2>` +
+      sec.items.map(it =>
+        `<div class="kcard"><h3>${it.t}</h3><p>${it.b}</p><span class="ksrc">${it.s}</span></div>`
+      ).join('') +
+      '</section>'
+    ).join('');
+}
+
 /* ══ 操作 ══════════════════════════════════════════════════ */
 function goHome(){
   if (S.busy) return;              // 返信の受信中は戻れない（送信が壊れるため）
+  S.mode = 'chat';
+  document.querySelectorAll('.mode').forEach(x => x.setAttribute('aria-selected', String(x.dataset.mode === 'chat')));
   S.history = [];
   log.querySelectorAll('.msg, .handoff, .error').forEach(n => n.remove());
+  const k = document.getElementById('kotoba'); if (k) k.remove();
+  $('#form').style.display = '';
   intro.style.display = '';
   renderIntro();
   window.scrollTo({ top: 0 });
@@ -704,8 +806,17 @@ document.querySelectorAll('.mode').forEach(b => b.addEventListener('click', () =
   document.querySelectorAll('.mode').forEach(x => x.setAttribute('aria-selected', String(x === b)));
   S.history = [];
   log.querySelectorAll('.msg, .handoff, .error').forEach(n => n.remove());
-  intro.style.display = '';
-  renderIntro();
+  const k = document.getElementById('kotoba'); if (k) k.remove();
+  if (S.mode === 'kotoba') {
+    intro.style.display = 'none';
+    $('#form').style.display = 'none';
+    renderKotoba();
+    window.scrollTo({ top: 0 });
+  } else {
+    $('#form').style.display = '';
+    intro.style.display = '';
+    renderIntro();
+  }
 }));
 
 $('#form').addEventListener('submit', (e) => {
