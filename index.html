@@ -166,10 +166,12 @@ main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18
   letter-spacing:.09em; color:var(--brand-deep);
   background:var(--brand-wash); border-radius:999px; padding:4px 13px;
 }
-.chips{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-top:22px}
+/* 1行に1つずつ縦に並べる。行数が常に同じになり、入れ替えボタンの位置が動かない */
+.chips{display:flex; flex-direction:column; align-items:center; gap:7px; margin-top:22px}
 .chip{
   background:var(--brand-wash); color:var(--brand-deep); border-radius:999px;
   padding:7px 15px; font-size:12.5px; font-weight:600; transition:.13s;
+  max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .chip:hover{background:var(--brand); color:#fff}
 .chip.reroll{
@@ -576,7 +578,7 @@ function renderChips(){
     const j = Math.floor(Math.random() * (i + 1));
     [picked[i], picked[j]] = [picked[j], picked[i]];
   }
-  const show = picked.slice(0, S.mode === 'chat' ? 6 : 4);
+  const show = picked.slice(0, S.mode === 'chat' ? 5 : 4);
   $('#chips').innerHTML =
     show.map(t => `<button class="chip" type="button">${t}</button>`).join('') +
     '<button class="chip reroll" type="button">↻ ほかの質問を見る</button>';
@@ -912,7 +914,7 @@ if (DIRECT && RELAY) {
   // 中継サーバ版: APIキーではなく合言葉を入れてもらう
   document.querySelector('label[for="key"]').textContent = '合言葉';
   $('#key').placeholder = '共有された合言葉';
-  document.querySelector('.dlg .lead').textContent = '合言葉はこのブラウザにだけ保存されます。APIキーの入力は不要です。';
+  document.querySelector('.dlg .lead').textContent = '合言葉はこのブラウザにだけ保存されます。';
   document.querySelector('.dlg .hint').textContent = '合言葉はお店の責任者から共有されます。';
 }
 $('#btn-settings').addEventListener('click', () => { $('#key').value = S.key; dlg.showModal(); checkHealth(); });
@@ -929,7 +931,7 @@ async function checkHealth(){
     const ready = Boolean(S.key);
     dot.className = 'dot ' + (ready ? 'ok' : 'ng');
     txt.textContent = RELAY
-      ? (ready ? '接続OK — 中継サーバ経由（キー入力は不要）' : '合言葉が未設定')
+      ? (ready ? '接続OK' : '合言葉が未設定')
       : (ready ? '接続OK — claude-opus-5（このブラウザのキー）' : 'APIキー未設定');
     return;
   }
