@@ -1,0 +1,711 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スパイス相談室 — スカイスクレイパー</title>
+<link rel="preload" as="image" href="img/kaicho-256.png">
+<link rel="preload" as="image" href="img/shacho-256.png">
+<style>
+/* ══ トークン ══════════════════════════════════════════════
+   配色は sky-scraper.jp から採取（赤 #D91000 / 濃赤 #990C00 /
+   文字 #333 / 淡赤 #FEF6F5）。話者の色分けはロゴの赤×黄から。 */
+:root{
+  color-scheme:light;
+  --brand:#D91000;
+  --brand-deep:#990C00;
+  --brand-wash:rgba(217,16,0,.08);
+  --paper:#FBF4F3;
+  --surface:#FFFFFF;
+  --surface-2:#F4EEED;
+  --ink:#333333;
+  --ink-2:#6E6664;
+  --ink-3:#A69E9D;
+  --line:#EADFDD;
+  --kaicho:#C41200;
+  --kaicho-bg:#FDEEEC;
+  --shacho:#9A6300;
+  --shacho-bg:#FFF6E2;
+  --alert:#8A5E14;
+  --alert-bg:#FBF2DF;
+  --shadow:0 1px 2px rgba(80,30,25,.07), 0 10px 30px rgba(80,30,25,.06);
+  --sans:"ヒラギノ角ゴ Pro","Hiragino Kaku Gothic Pro","Hiragino Sans","Yu Gothic",YuGothic,メイリオ,Meiryo,system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --brand:#FF5A45;
+    --brand-deep:#FF8371;
+    --brand-wash:rgba(255,90,69,.13);
+    --paper:#171110;
+    --surface:#211A19;
+    --surface-2:#2C2422;
+    --ink:#F0EAE8;
+    --ink-2:#B5AAA7;
+    --ink-3:#8A7E7B;
+    --line:#382E2C;
+    --kaicho:#FF7461;
+    --kaicho-bg:#341F1C;
+    --shacho:#F2B444;
+    --shacho-bg:#2F2513;
+    --alert:#E0B356;
+    --alert-bg:#2C2415;
+    --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --brand:#FF5A45; --brand-deep:#FF8371; --brand-wash:rgba(255,90,69,.13);
+  --paper:#171110; --surface:#211A19; --surface-2:#2C2422;
+  --ink:#F0EAE8; --ink-2:#B5AAA7; --ink-3:#8A7E7B; --line:#382E2C;
+  --kaicho:#FF7461; --kaicho-bg:#341F1C;
+  --shacho:#F2B444; --shacho-bg:#2F2513;
+  --alert:#E0B356; --alert-bg:#2C2415;
+  --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.75;
+  -webkit-font-smoothing:antialiased; text-size-adjust:100%;
+}
+button{font:inherit; color:inherit; cursor:pointer; border:none; background:none}
+img{display:block; max-width:100%}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px; border-radius:8px}
+
+.app{
+  max-width:760px; margin:0 auto; min-height:100dvh;
+  display:flex; flex-direction:column; background:var(--surface);
+  box-shadow:0 0 0 1px var(--line);
+}
+
+/* ══ ヘッダー ══════════════════════════════════════════════ */
+header{position:sticky; top:0; z-index:20; background:var(--surface); border-bottom:1px solid var(--line)}
+.bar{display:flex; align-items:center; gap:11px; padding:13px 18px 11px}
+.mark{
+  font-size:19px; font-weight:800; letter-spacing:-.02em; line-height:1;
+  color:var(--ink);
+  background:none; border:0; padding:0; font-family:inherit; cursor:pointer;
+}
+.mark:hover em{text-decoration:underline}
+.mark em{font-style:normal; color:var(--brand)}
+.brandline{
+  font-size:10px; font-weight:800; letter-spacing:.1em; color:var(--brand);
+  border-left:1px solid var(--line); padding-left:11px; line-height:1.3;
+}
+.brandline span{display:block; font-size:8.5px; font-weight:600; color:var(--ink-3); letter-spacing:.06em}
+.bar .spacer{flex:1}
+.iconbtn{
+  width:34px; height:34px; border-radius:9px; display:grid; place-items:center;
+  color:var(--ink-2); border:1px solid var(--line);
+}
+.iconbtn:hover{background:var(--surface-2); color:var(--brand)}
+
+/* 話す相手 */
+.pickers{display:flex; gap:6px; padding:0 16px 12px}
+.pick{
+  flex:1 1 0; min-width:0; display:flex; align-items:center; gap:7px;
+  background:var(--surface-2); border-radius:999px; padding:4px 10px 4px 4px;
+  transition:background .15s, box-shadow .15s;
+  box-shadow:inset 0 0 0 1.5px transparent;
+}
+.pick .av{width:34px; height:34px; border-radius:50%; flex:none; background:#fff; box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)}
+.pick .txt{min-width:0; text-align:left}
+.pick b{display:block; font-size:12px; font-weight:700; line-height:1.25; white-space:nowrap}
+.pick i{display:block; font-size:9.5px; font-style:normal; color:var(--ink-3); line-height:1.25; white-space:nowrap}
+.pick[aria-pressed="true"]{background:var(--surface)}
+.pick[aria-pressed="true"][data-who="kaicho"]{box-shadow:inset 0 0 0 1.5px var(--kaicho)}
+.pick[aria-pressed="true"][data-who="kaicho"] b{color:var(--kaicho)}
+.pick[aria-pressed="true"][data-who="shacho"]{box-shadow:inset 0 0 0 1.5px var(--shacho)}
+.pick[aria-pressed="true"][data-who="shacho"] b{color:var(--shacho)}
+.pick[aria-pressed="true"][data-who="auto"]{box-shadow:inset 0 0 0 1.5px var(--ink-2)}
+.pick[data-who="auto"]{flex:0 0 auto; padding:4px 14px; justify-content:center}
+.pick[data-who="auto"] .txt{text-align:center}
+.pick[data-who="auto"] b{font-size:12px}
+.pick[data-who="auto"] i{color:var(--ink-3)}
+
+/* モード */
+.modes{display:flex; gap:24px; padding:0 18px; border-top:1px solid var(--line)}
+.mode{
+  padding:11px 0 9px; font-size:13.5px; font-weight:700; color:var(--ink-3);
+  border-bottom:2.5px solid transparent; margin-bottom:-1px;
+}
+.mode[aria-selected="true"]{color:var(--brand); border-bottom-color:var(--brand)}
+
+/* ══ 会話 ══════════════════════════════════════════════════ */
+main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18px}
+
+.intro{text-align:center; padding:22px 4px 6px}
+.intro .avs{display:flex; justify-content:center; margin-bottom:18px}
+.intro .avs .ring{
+  width:92px; height:92px; border-radius:50%; background:#fff; overflow:hidden;
+  box-shadow:0 0 0 3px var(--surface), 0 6px 18px rgba(80,30,25,.12);
+  flex:none; position:relative;
+}
+.intro .avs .ring:last-child{margin-left:-16px}
+.intro .avs .ring video,
+.intro .avs .ring img{
+  width:100%; height:100%; object-fit:cover; display:block;
+  /* 全身動画なので顔まわりに寄せる */
+  transform:scale(1.85); transform-origin:50% 12%;
+}
+.intro h1{
+  font-size:22px; font-weight:800; letter-spacing:-.01em; margin:0 0 10px;
+  color:var(--ink); text-wrap:balance;
+}
+.intro .lead{margin:0 auto; font-size:13.5px; color:var(--ink-2); max-width:30em}
+.intro .tag{
+  display:inline-block; margin-bottom:14px; font-size:10.5px; font-weight:700;
+  letter-spacing:.09em; color:var(--brand-deep);
+  background:var(--brand-wash); border-radius:999px; padding:4px 13px;
+}
+.chips{display:flex; flex-wrap:wrap; gap:7px; justify-content:center; margin-top:22px}
+.chip{
+  background:var(--brand-wash); color:var(--brand-deep); border-radius:999px;
+  padding:7px 15px; font-size:12.5px; font-weight:600; transition:.13s;
+}
+.chip:hover{background:var(--brand); color:#fff}
+
+.msg{display:flex; gap:10px; align-items:flex-start}
+.msg.me{flex-direction:row-reverse}
+.msg .av{width:38px; height:38px; border-radius:50%; flex:none; margin-top:20px; background:#fff; box-shadow:0 0 0 1.5px var(--line)}
+.msg.kaicho .av{box-shadow:0 0 0 1.5px var(--kaicho)}
+.msg.shacho .av{box-shadow:0 0 0 1.5px var(--shacho)}
+.body{min-width:0; max-width:min(86%,32em)}
+.who{font-size:11px; font-weight:700; letter-spacing:.03em; margin:0 0 4px 3px}
+.msg.kaicho .who{color:var(--kaicho)}
+.msg.shacho .who{color:var(--shacho)}
+.bubble{
+  padding:12px 16px; border-radius:16px; font-size:15px;
+  white-space:pre-wrap; word-break:break-word; line-height:1.7;
+}
+.msg.me .bubble{background:var(--surface-2); border-bottom-right-radius:5px}
+.msg.kaicho .bubble{background:var(--kaicho-bg); border-bottom-left-radius:5px}
+.msg.shacho .bubble{background:var(--shacho-bg); border-bottom-left-radius:5px}
+.msg.me .body{margin-top:20px}
+
+.dots span{
+  display:inline-block; width:6px; height:6px; margin-right:4px; border-radius:50%;
+  background:currentColor; opacity:.35; animation:blink 1.3s infinite;
+}
+.dots span:nth-child(2){animation-delay:.18s}
+.dots span:nth-child(3){animation-delay:.36s}
+@keyframes blink{0%,60%,100%{opacity:.22} 30%{opacity:.8}}
+@media (prefers-reduced-motion:reduce){ .dots span{animation:none} }
+
+.handoff{
+  border:1px solid color-mix(in srgb, var(--alert) 32%, var(--line));
+  background:var(--alert-bg); border-radius:16px; padding:16px 18px;
+}
+.handoff h3{margin:0 0 8px; font-size:14px; font-weight:700; color:var(--alert)}
+.handoff p{margin:0 0 12px; font-size:13.5px; color:var(--ink-2)}
+.handoff dl{margin:0; display:grid; grid-template-columns:auto 1fr; gap:6px 14px; font-size:13px}
+.handoff dt{color:var(--ink-3); white-space:nowrap}
+.handoff dd{margin:0; font-variant-numeric:tabular-nums; font-weight:600}
+
+.error{
+  border:1px solid var(--line); background:var(--surface-2); border-radius:16px;
+  padding:14px 17px; font-size:13.5px; color:var(--ink-2);
+}
+.error code{font-size:11.5px; background:var(--paper); padding:1px 6px; border-radius:5px; word-break:break-all}
+
+/* ══ 入力 ══════════════════════════════════════════════════ */
+footer{
+  position:sticky; bottom:0; background:var(--surface); border-top:1px solid var(--line);
+  padding:11px 18px calc(9px + env(safe-area-inset-bottom));
+}
+.composer{display:flex; gap:9px; align-items:flex-end}
+textarea{
+  flex:1; resize:none; font:inherit; font-size:15px; color:var(--ink);
+  background:var(--surface-2); border:1.5px solid transparent; border-radius:22px;
+  padding:11px 16px; max-height:140px; min-height:46px; line-height:1.6;
+  transition:border-color .15s;
+}
+textarea:focus{outline:none; border-color:var(--brand)}
+textarea::placeholder{color:var(--ink-3)}
+.send{
+  width:46px; height:46px; flex:none; border-radius:50%;
+  background:var(--brand); color:#fff; display:grid; place-items:center;
+  transition:.15s;
+}
+.send:hover:not(:disabled){background:var(--brand-deep)}
+.send:disabled{opacity:.28; cursor:default}
+.note{
+  font-size:10px; color:var(--ink-3); text-align:center; margin:9px 0 0; line-height:1.6;
+}
+.note b{color:var(--brand); font-weight:800; letter-spacing:.06em}
+
+/* ══ 設定 ══════════════════════════════════════════════════ */
+dialog{
+  border:none; border-radius:18px; padding:0; max-width:420px; width:calc(100% - 32px);
+  background:var(--surface); color:var(--ink); box-shadow:var(--shadow);
+}
+dialog::backdrop{background:rgba(40,10,8,.5)}
+.dlg{padding:24px}
+.dlg h2{margin:0 0 4px; font-size:16px; font-weight:800}
+.dlg .lead{margin:0 0 18px; font-size:12.5px; color:var(--ink-3)}
+.dlg label{display:block; font-size:12px; font-weight:600; color:var(--ink-2); margin-bottom:6px}
+.dlg input{
+  width:100%; font:inherit; font-size:13px; padding:10px 12px; border-radius:10px;
+  border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink);
+}
+.dlg input:focus{outline:none; border-color:var(--brand)}
+.dlg .hint{font-size:11.5px; color:var(--ink-3); margin:8px 0 0; line-height:1.65}
+.dlg .hint code{background:var(--surface-2); padding:1px 5px; border-radius:4px}
+.dlg .row{display:flex; gap:9px; margin-top:22px}
+.dlg .row button{flex:1; padding:11px; border-radius:10px; background:var(--surface-2); font-weight:600}
+.dlg .row button.primary{background:var(--brand); color:#fff}
+.status{display:flex; align-items:center; gap:8px; font-size:12px; color:var(--ink-2); margin-top:18px}
+.dot{width:8px; height:8px; border-radius:50%; background:var(--ink-3); flex:none}
+.dot.ok{background:#2E9E6B}
+.dot.ng{background:var(--brand)}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div class="bar">
+      <button class="mark" id="btn-home" type="button" aria-label="最初の画面に戻る"><em>スパイス</em>相談室</button>
+      <span class="brandline">skyscraper<span>GO☆FIGHT☆WIN！</span></span>
+      <span class="spacer"></span>
+      <button class="iconbtn" id="btn-home2" aria-label="最初の画面に戻る" title="最初に戻る">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>
+        </svg>
+      </button>
+      <button class="iconbtn" id="btn-settings" aria-label="設定">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="pickers" role="group" aria-label="話す相手">
+      <button class="pick" data-who="kaicho" aria-pressed="false">
+        <img class="av" src="img/kaicho-256.png" alt="">
+        <span class="txt"><b>西牧会長</b><i>将来とお金</i></span>
+      </button>
+      <button class="pick" data-who="shacho" aria-pressed="false">
+        <img class="av" src="img/shacho-256.png" alt="">
+        <span class="txt"><b>諸沢社長</b><i>今日のこと</i></span>
+      </button>
+      <button class="pick" data-who="auto" aria-pressed="true">
+        <span class="txt"><b>おまかせ</b><i>自動で選ぶ</i></span>
+      </button>
+    </div>
+
+    <div class="modes" role="tablist">
+      <button class="mode" role="tab" data-mode="chat" aria-selected="true">相談する</button>
+      <button class="mode" role="tab" data-mode="praise" aria-selected="false">ほめてもらう</button>
+    </div>
+  </header>
+
+  <main id="log">
+    <div class="intro" id="intro">
+      <div class="avs">
+        <span class="ring"><video class="idle" data-who="kaicho" src="img/pop/kaicho-idle.mp4" poster="img/pop/kaicho-full.png"
+               autoplay loop muted playsinline aria-label="西牧会長"></video></span>
+        <span class="ring"><video class="idle" data-who="shacho" src="img/pop/shacho-idle.mp4" poster="img/pop/shacho-full.png"
+               autoplay loop muted playsinline aria-label="諸沢社長"></video></span>
+      </div>
+      <span class="tag" id="intro-tag">人生にスパイスを</span>
+      <h1 id="intro-title">どうした。話してみな。</h1>
+      <p class="lead" id="intro-lead">仕事のこと、将来のこと、今日しんどかったこと。<br>なんでも書いて下さい。ここでの話は誰にも見られません。</p>
+      <div class="chips" id="chips"></div>
+    </div>
+  </main>
+
+  <footer>
+    <form class="composer" id="form">
+      <textarea id="input" rows="1" placeholder="ここに書く" autocomplete="off"></textarea>
+      <button class="send" id="send" type="submit" aria-label="送信" disabled>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+      </button>
+    </form>
+    <p class="note"><b>GO☆FIGHT☆WIN！</b></p>
+  </footer>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg">
+    <h2>設定</h2>
+    <p class="lead">試作版。APIキーはこのブラウザにだけ保存され、外部には送られません。</p>
+    <label for="key">Anthropic APIキー</label>
+    <input id="key" type="password" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+    <p class="hint">サーバ側の環境変数 <code>ANTHROPIC_API_KEY</code> が設定されていれば、ここは空のままで構いません。</p>
+    <div class="status"><span class="dot" id="dot"></span><span id="status-text">確認中…</span></div>
+    <div class="row">
+      <button type="button" id="dlg-close">閉じる</button>
+      <button type="button" class="primary" id="dlg-save">保存</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="prompts.js"></script>
+<script>
+/* ══ 状態 ══════════════════════════════════════════════════ */
+const S = {
+  who: 'auto',
+  mode: 'chat',
+  busy: false,
+  history: [],
+  key: localStorage.getItem('pocket_key') || '',
+};
+
+const $ = (s) => document.querySelector(s);
+const log = $('#log'), intro = $('#intro'), input = $('#input'), sendBtn = $('#send');
+const AVATAR = { kaicho: 'img/kaicho-256.png', shacho: 'img/shacho-256.png' };
+const NAME = { kaicho: '西牧会長', shacho: '諸沢社長' };
+
+/* ══ サーバ不要モード（GitHub Pages用） ══════════════════════
+   ビルド時に prompts.js（window.PROMPTS）が同梱されている場合、
+   ローカルサーバを経由せず、ブラウザから直接 Anthropic API を呼ぶ。
+   APIキーは右上の歯車から入力（このブラウザのみに保存）。       */
+const DIRECT = typeof window.PROMPTS === 'object' && window.PROMPTS !== null;
+
+function buildSystemDirect(){
+  const p = window.PROMPTS;
+  const parts = [p.common, p.knowledge];
+  if (S.who === 'kaicho') {
+    parts.push(p.kaicho, '\n## 今回の指定\n\n必ず西牧会長として答えてください。1行目は `[KAICHO]` です。');
+  } else if (S.who === 'shacho') {
+    parts.push(p.shacho, '\n## 今回の指定\n\n必ず諸沢社長として答えてください。1行目は `[SHACHO]` です。');
+  } else {
+    parts.push(p.kaicho, p.shacho, [
+      '\n## 今回の指定（どちらが答えるかを自分で選ぶ）', '',
+      '相談内容を読んで、より適した方が答えてください。', '',
+      '- 将来・お金・目標・キャリア・勉強・第一印象・信用 → 西牧会長',
+      '- 今日の仕事のつらさ・人間関係・自信のなさ・落ち込み → 諸沢社長',
+      '- 相手が弱っている、傷ついていると感じたら → 諸沢社長', '',
+      '迷ったら諸沢社長を選んでください。数字で突きつけるのは、余裕がある相手にだけです。',
+    ].join('\n'));
+  }
+  if (S.mode === 'praise') parts.push(p.praise);
+  return parts.join('\n\n---\n\n');
+}
+
+function directRequest(){
+  return fetch('https://api.anthropic.com/v1/messages', {
+    method:'POST',
+    headers:{
+      'content-type':'application/json',
+      'x-api-key':S.key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+    },
+    body: JSON.stringify({
+      model:'claude-opus-5',
+      max_tokens:4000,
+      stream:true,
+      output_config:{ effort:'low' },
+      system:[{ type:'text', text:buildSystemDirect(), cache_control:{ type:'ephemeral' } }],
+      messages:S.history.slice(-20).map(m => ({
+        role: m.role === 'assistant' ? 'assistant' : 'user',
+        content: String(m.content || '').slice(0, 4000),
+      })),
+    }),
+  });
+}
+
+/* ══ 相談窓口へ渡すべき言葉 ═══════════════════════════════════
+   ここに当たった場合、AIには一切送らず、相談先カードだけを出します。
+   運用に合わせて増減してください。                              */
+const HANDOFF = [
+  '死にたい','死のう','消えたい','いなくなりたい','自殺','自傷','リストカット','首を吊',
+  '生きていたくない','生きてる意味がない',
+  'パワハラ','セクハラ','モラハラ','いじめ','いじめられ','殴られ','蹴られ','暴力',
+  '脅され','怒鳴られ続け','無視され続け','体を触られ','セクシャル',
+  'うつ病','鬱病','心療内科','精神科','眠れない日が','パニック障害','過呼吸',
+  '闇金','取り立て','多重債務','自己破産','借金が返せ','給料が払われ','未払い',
+  '労働基準監督署','訴え','警察',
+];
+
+const CONTACTS = `
+<div class="handoff">
+  <h3>これは、人が直接聞くべき話です</h3>
+  <p>ここで私が答えるより、ちゃんと人に聞いてもらったほうがいい。君が一人で抱えるのが、いちばんよくない。</p>
+  <dl>
+    <dt>社内の相談窓口</dt><dd>（担当者名・連絡先を設定してください）</dd>
+    <dt>こころの健康相談統一ダイヤル</dt><dd>0570-064-556</dd>
+    <dt>いのちの電話</dt><dd>0570-783-556（10:00〜22:00）</dd>
+    <dt>#いのちSOS</dt><dd>0120-061-338（24時間）</dd>
+  </dl>
+</div>`;
+
+/* ══ 例文・文言 ════════════════════════════════════════════ */
+const CHIPS = {
+  chat: [
+    'この仕事、意味あるのかなと思ってしまう',
+    '将来のお金が不安です',
+    '先輩とうまく話せません',
+    '今日ミスをして落ち込んでいます',
+    '目標の立て方がわかりません',
+    'バイトを辞めようか迷っています',
+    'ピークがしんどくて心が折れそうです',
+    '仕事が楽しくありません',
+    '自分に自信が持てません',
+    '貯金がぜんぜんできません',
+    '夢ややりたいことが見つかりません',
+    '人に信用されるにはどうしたらいいですか',
+  ],
+  praise: [
+    'お客さんが言う前に水を持っていった',
+    'ピークで一人で回した',
+    '新人に教えるとき、理由から説明した',
+    '閉店後に厨房を全部磨いた',
+    'クレームを最後まで笑顔で聞けた',
+    '苦手な先輩に自分からあいさつした',
+    '後輩のシフトを代わってあげた',
+    '身だしなみを整えてから出勤した',
+  ],
+};
+
+const COPY = {
+  chat: {
+    tag:'人生にスパイスを',
+    title:'どうした。話してみな。',
+    lead:'仕事のこと、将来のこと、今日しんどかったこと。<br>なんでも書いて下さい。ここでの話は誰にも見られません。',
+    ph:'ここに書く',
+  },
+  praise: {
+    tag:'今日のトッピング',
+    title:'今日、何をやった？',
+    lead:'小さいことでいい。やったことを書いてくれれば、<br>それがどういう力なのか、名前をつけて返します。',
+    ph:'今日やったことを書く',
+  },
+};
+
+/* ══ 描画 ══════════════════════════════════════════════════ */
+function renderChips(){
+  $('#chips').innerHTML = CHIPS[S.mode].map(t => `<button class="chip" type="button">${t}</button>`).join('');
+  $('#chips').querySelectorAll('.chip').forEach(b =>
+    b.addEventListener('click', () => { input.value = b.textContent; resize(); input.focus(); }));
+}
+
+function renderIntro(){
+  const c = COPY[S.mode];
+  $('#intro-tag').textContent = c.tag;
+  $('#intro-title').textContent = c.title;
+  $('#intro-lead').innerHTML = c.lead;
+  input.placeholder = c.ph;
+  renderChips();
+}
+
+function addMessage(kind, text){
+  intro.style.display = 'none';
+  const el = document.createElement('div');
+  el.className = `msg ${kind}`;
+  el.innerHTML = kind === 'me'
+    ? '<div class="body"><div class="bubble"></div></div>'
+    : `<img class="av" src="${AVATAR[kind]}" alt=""><div class="body"><div class="who">${NAME[kind]}</div><div class="bubble"></div></div>`;
+  el.querySelector('.bubble').textContent = text;
+  log.appendChild(el);
+  scroll();
+  return el.querySelector('.bubble');
+}
+
+function addRaw(html){
+  intro.style.display = 'none';
+  const el = document.createElement('div');
+  el.innerHTML = html;
+  log.appendChild(el.firstElementChild);
+  scroll();
+}
+
+function scroll(){ requestAnimationFrame(() => window.scrollTo({ top: document.body.scrollHeight, behavior:'smooth' })); }
+
+/* 会長は改行を多用する文体なので、空行が続きすぎたら1行にまとめる */
+function tidy(t){ return t.replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n'); }
+
+function resize(){
+  input.style.height = 'auto';
+  input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+  sendBtn.disabled = S.busy || !input.value.trim();
+}
+
+/* ══ 送信 ══════════════════════════════════════════════════ */
+async function send(text){
+  if (S.busy) return;
+  addMessage('me', text);
+  S.history.push({ role:'user', content:text });
+  input.value = ''; resize();
+
+  if (HANDOFF.some(w => text.includes(w))) {
+    addRaw(CONTACTS);
+    S.history.pop();
+    return;
+  }
+
+  S.busy = true; sendBtn.disabled = true;
+
+  const guess = S.who === 'kaicho' ? 'kaicho' : 'shacho';
+  const bubble = addMessage(guess, '');
+  bubble.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+  const wrap = bubble.closest('.msg');
+
+  try {
+    let res;
+    if (DIRECT) {
+      if (!S.key) {
+        wrap.remove(); addRaw(errorCard(400, { error:'no_api_key' })); S.history.pop();
+        return;
+      }
+      res = await directRequest();
+    } else {
+      const headers = { 'content-type':'application/json' };
+      if (S.key) headers['x-user-api-key'] = S.key;
+      res = await fetch('/api/chat', {
+        method:'POST', headers,
+        body: JSON.stringify({ messages:S.history, speaker:S.who, mode:S.mode }),
+      });
+    }
+
+    if (!res.ok) {
+      const info = await res.json().catch(() => ({}));
+      wrap.remove(); addRaw(errorCard(res.status, info)); S.history.pop();
+      return;
+    }
+
+    const reader = res.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', full = '', tagged = false;
+    bubble.textContent = '';
+
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream:true });
+      const lines = buf.split('\n');
+      buf = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith('data:')) continue;
+        let ev; try { ev = JSON.parse(line.slice(5).trim()); } catch { continue; }
+        if (ev.type !== 'content_block_delta' || ev.delta?.type !== 'text_delta') continue;
+
+        full += ev.delta.text;
+
+        if (!tagged) {
+          const m = full.match(/^\s*\[(KAICHO|SHACHO)\]\s*\n?/);
+          if (m) {
+            const who = m[1] === 'KAICHO' ? 'kaicho' : 'shacho';
+            wrap.className = `msg ${who}`;
+            wrap.querySelector('.who').textContent = NAME[who];
+            wrap.querySelector('.av').src = AVATAR[who];
+            full = full.slice(m[0].length);
+            tagged = true;
+          } else if (full.length > 24) {
+            tagged = true;
+          }
+        }
+        if (tagged) { bubble.textContent = tidy(full); scroll(); }
+      }
+    }
+
+    bubble.textContent = tidy(full).trim();
+    S.history.push({ role:'assistant', content: tidy(full).trim() });
+
+  } catch (err) {
+    wrap.remove();
+    addRaw(`<div class="error">通信に失敗しました。サーバが起動しているか確認してください。<br><code>${String(err)}</code></div>`);
+    S.history.pop();
+  } finally {
+    S.busy = false; resize();
+  }
+}
+
+function errorCard(status, info){
+  if (info.error === 'no_api_key')
+    return '<div class="error">APIキーが設定されていません。右上の歯車から入力してください。</div>';
+  if (status === 401)
+    return '<div class="error">APIキーが正しくないようです。右上の歯車から入れ直してください。</div>';
+  if (status === 429)
+    return '<div class="error">今アクセスが混み合っています。少し待ってからもう一度送ってください。</div>';
+  return `<div class="error">応答を受け取れませんでした（${status}）。<br><code>${(info.detail || info.error || '').toString().slice(0,200)}</code></div>`;
+}
+
+/* ══ 操作 ══════════════════════════════════════════════════ */
+function goHome(){
+  if (S.busy) return;              // 返信の受信中は戻れない（送信が壊れるため）
+  S.history = [];
+  log.querySelectorAll('.msg, .handoff, .error').forEach(n => n.remove());
+  intro.style.display = '';
+  renderIntro();
+  window.scrollTo({ top: 0 });
+  document.querySelectorAll('video.idle').forEach(v => v.play().catch(() => {}));
+}
+$('#btn-home').addEventListener('click', goHome);
+$('#btn-home2').addEventListener('click', goHome);
+
+document.querySelectorAll('.pick').forEach(b => b.addEventListener('click', () => {
+  S.who = b.dataset.who;
+  document.querySelectorAll('.pick').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+}));
+
+document.querySelectorAll('.mode').forEach(b => b.addEventListener('click', () => {
+  S.mode = b.dataset.mode;
+  document.querySelectorAll('.mode').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+  S.history = [];
+  log.querySelectorAll('.msg, .handoff, .error').forEach(n => n.remove());
+  intro.style.display = '';
+  renderIntro();
+}));
+
+$('#form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const t = input.value.trim();
+  if (t) send(t);
+});
+
+input.addEventListener('input', resize);
+input.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); $('#form').requestSubmit(); }
+});
+
+const dlg = $('#dlg');
+$('#btn-settings').addEventListener('click', () => { $('#key').value = S.key; dlg.showModal(); checkHealth(); });
+$('#dlg-close').addEventListener('click', () => dlg.close());
+$('#dlg-save').addEventListener('click', () => {
+  S.key = $('#key').value.trim();
+  if (S.key) localStorage.setItem('pocket_key', S.key); else localStorage.removeItem('pocket_key');
+  dlg.close();
+});
+
+async function checkHealth(){
+  const dot = $('#dot'), txt = $('#status-text');
+  if (DIRECT) {
+    const ready = Boolean(S.key);
+    dot.className = 'dot ' + (ready ? 'ok' : 'ng');
+    txt.textContent = ready ? '接続OK — claude-opus-5（このブラウザのキー）' : 'APIキー未設定';
+    return;
+  }
+  try {
+    const h = await (await fetch('/healthz')).json();
+    const ready = h.server_key || Boolean(S.key);
+    dot.className = 'dot ' + (ready ? 'ok' : 'ng');
+    txt.textContent = ready
+      ? `接続OK — ${h.model}（${h.server_key ? 'サーバのキー' : 'このブラウザのキー'}）`
+      : `${h.model} — APIキー未設定`;
+  } catch {
+    dot.className = 'dot ng';
+    txt.textContent = 'サーバに接続できません';
+  }
+}
+
+/* 「視差効果を減らす」設定の人には動かさない（最初のコマで止める） */
+if (matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  document.querySelectorAll('video.idle').forEach(v => { v.autoplay = false; v.pause(); });
+}
+/* 動画が読めない場合はポスター画像で静止表示のまま（何もしなくてよい） */
+
+renderIntro();
+requestAnimationFrame(resize);
+</script>
+</body>
+</html>
