@@ -66,10 +66,13 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+/* 横スクロールを完全に殺す（iPhoneでキーボード開閉時に横へずれるのを防ぐ） */
+html,body{overflow-x:hidden; max-width:100%}
 body{
   margin:0; background:var(--paper); color:var(--ink);
   font-family:var(--sans); font-size:16px; line-height:1.75;
   -webkit-font-smoothing:antialiased; text-size-adjust:100%;
+  overscroll-behavior-x:none;
 }
 button{font:inherit; color:inherit; cursor:pointer; border:none; background:none}
 img{display:block; max-width:100%}
@@ -218,7 +221,8 @@ footer{
 }
 .composer{display:flex; gap:9px; align-items:flex-end}
 textarea{
-  flex:1; resize:none; font:inherit; font-size:15px; color:var(--ink);
+  /* 16px未満だとiPhoneがフォーカス時に自動ズームして画面が横にずれる */
+  flex:1; resize:none; font:inherit; font-size:16px; color:var(--ink);
   background:var(--surface-2); border:1.5px solid transparent; border-radius:22px;
   padding:11px 16px; max-height:140px; min-height:46px; line-height:1.6;
   transition:border-color .15s;
@@ -248,7 +252,7 @@ dialog::backdrop{background:rgba(40,10,8,.5)}
 .dlg .lead{margin:0 0 18px; font-size:12.5px; color:var(--ink-3)}
 .dlg label{display:block; font-size:12px; font-weight:600; color:var(--ink-2); margin-bottom:6px}
 .dlg input{
-  width:100%; font:inherit; font-size:13px; padding:10px 12px; border-radius:10px;
+  width:100%; font:inherit; font-size:16px; padding:10px 12px; border-radius:10px;
   border:1.5px solid var(--line); background:var(--surface-2); color:var(--ink);
 }
 .dlg input:focus{outline:none; border-color:var(--brand)}
