@@ -138,6 +138,14 @@ header{position:sticky; top:0; z-index:20; background:var(--surface); border-bot
   border-bottom:2.5px solid transparent; margin-bottom:-1px;
 }
 .mode[aria-selected="true"]{color:var(--brand); border-bottom-color:var(--brand)}
+/* 会長の言葉: AI相談とは別要素なので右に離し、金色のグラデーション文字に */
+.mode[data-mode="kotoba"]{
+  margin-left:auto;
+  background:linear-gradient(120deg, #A67C00 0%, #E6B422 35%, #FFE28A 52%, #D4AF37 70%, #8C6D1F 100%);
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent;
+}
+.mode[data-mode="kotoba"][aria-selected="true"]{border-bottom-color:#D4AF37}
 
 /* ══ 会話 ══════════════════════════════════════════════════ */
 main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18px}
