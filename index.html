@@ -700,7 +700,7 @@ function typewriter(bubble){
     if (shown < target.length) {
       const behind = target.length - shown;
       // 遅れの量に比例して速度を連続的に変える（段差を作らない）
-      const rate = Math.max(50, Math.min(900, behind * (done ? 8 : 3.5)));
+      const rate = Math.max(30, Math.min(600, behind * (done ? 6 : 2)));
       shown = Math.min(target.length, shown + rate * dt);
       bubble.textContent = target.slice(0, Math.floor(shown));
       scroll(true);
