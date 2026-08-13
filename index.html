@@ -179,6 +179,33 @@ header{position:sticky; top:0; z-index:20; background:var(--surface); border-bot
 }
 .mode[data-mode="kotoba"][aria-selected="true"]{border-bottom-color:#D4AF37}
 
+/* 「会長の言葉」に吹き出しを付けて目立たせる（開いている間は消す） */
+.mode[data-mode="kotoba"]{position:relative}
+.mode[data-mode="kotoba"]::before,
+.mode[data-mode="kotoba"]::after{
+  position:absolute; pointer-events:none;
+  animation:kotobaFloat 2.6s ease-in-out infinite;
+}
+.mode[data-mode="kotoba"]::after{
+  content:'50の教え';
+  top:calc(100% + 13px); right:0;
+  background:linear-gradient(120deg,#E6B422,#D4AF37);
+  color:#3A2B00; -webkit-text-fill-color:#3A2B00;
+  font-size:10px; font-weight:800; letter-spacing:.06em; white-space:nowrap;
+  padding:4px 11px; border-radius:999px;
+  box-shadow:0 3px 10px rgba(150,110,20,.3);
+}
+.mode[data-mode="kotoba"]::before{        /* 吹き出しの三角 */
+  content:''; top:calc(100% + 4px); right:16px;
+  border:5px solid transparent; border-bottom-color:#E6B422;
+}
+.mode[data-mode="kotoba"][aria-selected="true"]::before,
+.mode[data-mode="kotoba"][aria-selected="true"]::after{display:none}
+@keyframes kotobaFloat{0%,100%{transform:translateY(0)} 50%{transform:translateY(-2.5px)}}
+@media (prefers-reduced-motion: reduce){
+  .mode[data-mode="kotoba"]::before,.mode[data-mode="kotoba"]::after{animation:none}
+}
+
 /* ══ 会話 ══════════════════════════════════════════════════ */
 main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18px; background:var(--field)}
 
