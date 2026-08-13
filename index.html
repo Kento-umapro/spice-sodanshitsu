@@ -14,14 +14,27 @@
   color-scheme:light;
   --brand:#D91000;
   --brand-deep:#990C00;
-  --brand-wash:rgba(217,16,0,.08);
-  --paper:#FBF4F3;
+  --brand-wash:rgba(217,16,0,.13);
+  --paper:#F6EFEA;
   --surface:#FFFFFF;
-  --surface-2:#F4EEED;
+  --surface-2:#EDE3E0;
   --ink:#333333;
   --ink-2:#6E6664;
   --ink-3:#A69E9D;
-  --line:#EADFDD;
+  --line:#E7DAD5;
+  /* ライトモードの立体感（ダークでは無効化して今の見た目のまま） */
+  --field:#F6EFEA;                 /* 会話エリアの地 */
+  --intro-card:#FFFFFF;            /* トップの白カード */
+  --intro-shadow:0 1px 2px rgba(80,30,25,.06), 0 6px 20px rgba(80,30,25,.07);
+  --intro-pad:20px 12px 24px;
+  --chip-border:rgba(217,16,0,.28);
+  --tag-bg:#D91000;                /* 「人生にスパイスを」を赤ベタに */
+  --tag-fg:#FFFFFF;
+  --tabbar-w:3px;                  /* タブ下の赤帯 */
+  --tabbar-line:#D91000;
+  --tabbar-shadow:0 3px 10px rgba(217,16,0,.10);
+  --auto-ring:#D91000;             /* 「おまかせ」選択中の輪郭 */
+  --auto-fg:#D91000;
   --kaicho:#C41200;
   --kaicho-bg:#FDEEEC;
   --shacho:#9A6300;
@@ -51,6 +64,19 @@
     --alert:#E0B356;
     --alert-bg:#2C2415;
     --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.3);
+    /* ダークは今の見た目を維持（カードや赤帯を出さない） */
+    --field:#211A19;
+    --intro-card:transparent;
+    --intro-shadow:none;
+    --intro-pad:22px 4px 6px;
+    --chip-border:transparent;
+    --tag-bg:rgba(255,90,69,.13);
+    --tag-fg:#FF8371;
+    --tabbar-w:1px;
+    --tabbar-line:#382E2C;
+    --tabbar-shadow:none;
+    --auto-ring:#B5AAA7;
+    --auto-fg:#F0EAE8;
   }
 }
 :root[data-theme="dark"]{
@@ -62,6 +88,10 @@
   --shacho:#F2B444; --shacho-bg:#2F2513;
   --alert:#E0B356; --alert-bg:#2C2415;
   --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 30px rgba(0,0,0,.3);
+  --field:#211A19; --intro-card:transparent; --intro-shadow:none; --intro-pad:22px 4px 6px;
+  --chip-border:transparent; --tag-bg:rgba(255,90,69,.13); --tag-fg:#FF8371;
+  --tabbar-w:1px; --tabbar-line:#382E2C; --tabbar-shadow:none;
+  --auto-ring:#B5AAA7; --auto-fg:#F0EAE8;
 }
 
 *{box-sizing:border-box}
@@ -125,14 +155,16 @@ header{position:sticky; top:0; z-index:20; background:var(--surface); border-bot
 .pick[aria-pressed="true"][data-who="kaicho"] b{color:var(--kaicho)}
 .pick[aria-pressed="true"][data-who="shacho"]{box-shadow:inset 0 0 0 1.5px var(--shacho)}
 .pick[aria-pressed="true"][data-who="shacho"] b{color:var(--shacho)}
-.pick[aria-pressed="true"][data-who="auto"]{box-shadow:inset 0 0 0 1.5px var(--ink-2)}
+.pick[aria-pressed="true"][data-who="auto"]{box-shadow:inset 0 0 0 2px var(--auto-ring)}
+.pick[aria-pressed="true"][data-who="auto"] b{color:var(--auto-fg)}
 .pick[data-who="auto"]{flex:0 0 auto; padding:4px 14px; justify-content:center}
 .pick[data-who="auto"] .txt{text-align:center}
 .pick[data-who="auto"] b{font-size:12px}
 .pick[data-who="auto"] i{color:var(--ink-3)}
 
 /* モード */
-.modes{display:flex; gap:24px; padding:0 18px; border-top:1px solid var(--line)}
+.modes{display:flex; gap:24px; padding:0 18px; border-top:1px solid var(--line);
+  border-bottom:var(--tabbar-w) solid var(--tabbar-line); box-shadow:var(--tabbar-shadow)}
 .mode{
   padding:11px 0 9px; font-size:13.5px; font-weight:700; color:var(--ink-3);
   border-bottom:2.5px solid transparent; margin-bottom:-1px;
@@ -148,9 +180,10 @@ header{position:sticky; top:0; z-index:20; background:var(--surface); border-bot
 .mode[data-mode="kotoba"][aria-selected="true"]{border-bottom-color:#D4AF37}
 
 /* ══ 会話 ══════════════════════════════════════════════════ */
-main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18px}
+main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18px; background:var(--field)}
 
-.intro{text-align:center; padding:22px 4px 6px}
+.intro{text-align:center; padding:var(--intro-pad); background:var(--intro-card);
+  border-radius:18px; box-shadow:var(--intro-shadow)}
 .intro .avs{display:flex; justify-content:center; margin-bottom:18px}
 .intro .avs .ring{
   width:92px; height:92px; border-radius:50%; background:#fff; overflow:hidden;
@@ -171,8 +204,8 @@ main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18
 .intro .lead{margin:0 auto; font-size:13.5px; color:var(--ink-2); max-width:30em}
 .intro .tag{
   display:inline-block; margin-bottom:14px; font-size:10.5px; font-weight:700;
-  letter-spacing:.09em; color:var(--brand-deep);
-  background:var(--brand-wash); border-radius:999px; padding:4px 13px;
+  letter-spacing:.09em; color:var(--tag-fg);
+  background:var(--tag-bg); border-radius:999px; padding:4px 13px;
 }
 /* 1行に1つずつ縦に並べる。入れ替えボタンは右上に縦書きで固定 */
 .chips{
@@ -183,6 +216,7 @@ main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18
   background:var(--brand-wash); color:var(--brand-deep); border-radius:999px;
   padding:7px 15px; font-size:12.5px; font-weight:600; transition:.13s;
   max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  box-shadow:inset 0 0 0 1px var(--chip-border);
 }
 .chip:hover{background:var(--brand); color:#fff}
 .chip.reroll{
@@ -287,7 +321,7 @@ textarea::placeholder{color:var(--ink-3)}
   transition:.15s;
 }
 .send:hover:not(:disabled){background:var(--brand-deep)}
-.send:disabled{opacity:.28; cursor:default}
+.send:disabled{opacity:.42; cursor:default}
 .note{
   font-size:10px; color:var(--ink-3); text-align:center; margin:9px 0 0; line-height:1.6;
 }
@@ -443,7 +477,7 @@ dialog::backdrop{background:rgba(40,10,8,.5)}
   </div>
 </dialog>
 
-<script src="prompts.js?v=fc6c5eafa5"></script>
+<script src="prompts.js?v=4f51d1fbaa"></script>
 <script>
 /* ══ 状態 ══════════════════════════════════════════════════ */
 const S = {
@@ -738,6 +772,34 @@ function resize(){
 }
 
 /* ══ 送信 ══════════════════════════════════════════════════ */
+/* ══ 作り置き回答 ════════════════════════════════════════════
+   参考質問（チップ）から選ばれた1問目は、事前に作っておいた回答
+   （1問5パターン）から1つ選んで表示する。APIを呼ばないので無料。
+   自由記述と、会話の2問目以降は、これまで通りAIが答える。      */
+function cannedAnswer(text){
+  const store = (window.CANNED || {})[S.mode];
+  if (!store || S.history.length > 0) return null;   // 会話の途中では使わない
+  const list = store[text];
+  if (!Array.isArray(list) || !list.length) return null;
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+async function playCanned(text, a){
+  addMessage('me', text);
+  S.history.push({ role:'user', content:text });
+  input.value = ''; resize();
+
+  S.busy = true; sendBtn.disabled = true;
+  const bubble = addMessage(a.who, '');
+  bubble.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
+  await new Promise(r => setTimeout(r, 400 + Math.random() * 500));   // 少しだけ考える間
+  bubble.textContent = '';
+  const tw = typewriter(bubble);
+  await tw.finish(a.text);
+  S.history.push({ role:'assistant', content:a.text });
+  S.busy = false; resize();
+}
+
 async function send(text){
   if (S.busy) return;
   // 合言葉が未入力なら、画面には何も出さずにロック画面へ（通過後に自動送信）
@@ -747,6 +809,12 @@ async function send(text){
     if (window.showGate) window.showGate();
     return;
   }
+  // 参考質問（チップ）の1問目なら、作り置きの回答を再生する（APIを呼ばない）
+  if (!HANDOFF.some(w => text.includes(w))) {
+    const a = cannedAnswer(text);
+    if (a) { await playCanned(text, a); return; }
+  }
+
   addMessage('me', text);
   S.history.push({ role:'user', content:text });
   input.value = ''; resize();
