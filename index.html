@@ -267,6 +267,11 @@ main{flex:1; padding:22px 18px 10px; display:flex; flex-direction:column; gap:18
   padding:12px 16px; border-radius:16px; font-size:15px;
   white-space:pre-wrap; word-break:break-word; line-height:1.7;
 }
+/* 出たばかりの文字をふわっと濃くする（1文字ずつの跳ねを消す） */
+@keyframes inkin{from{opacity:0} to{opacity:1}}
+.bubble .ink{animation:inkin .34s ease-out both}
+@media (prefers-reduced-motion: reduce){ .bubble .ink{animation:none} }
+
 .msg.me .bubble{background:var(--surface-2); border-bottom-right-radius:5px}
 .msg.kaicho .bubble{background:var(--kaicho-bg); border-bottom-left-radius:5px}
 /* おまかせで話者が決まるまでの「考え中」表示（名前・アイコンを伏せて色も中立に） */
@@ -717,30 +722,62 @@ function tidy(t){ return t.replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n'); 
    貯めて、一定のリズムで少しずつ表示する。遅れが溜まったときだけ
    歩幅を広げて追いつく。                                        */
 function typewriter(bubble){
-  let target = '', shown = 0, done = false, resolveDone = null;
+  bubble.textContent = '';
+  const head = document.createTextNode('');   // 表示が確定した部分
+  bubble.appendChild(head);
+  const fading = [];                          // 出たばかりの文字（薄→濃にフェード中）
+
+  let target = '', shown = 0, drawn = 0, done = false, resolveDone = null;
   let stopped = false, last = performance.now();
+
+  // フェードが終わった分は確定テキストに吸収して、要素を増やしすぎない
+  function absorb(keep){
+    while (fading.length > keep) {
+      const s = fading.shift();
+      head.data += s.textContent;
+      s.remove();
+    }
+  }
+
+  // 下端を見ているときだけ追従する（毎フレーム動かすとカクつくため）
+  function follow(force){
+    const doc = document.documentElement;
+    const gap = doc.scrollHeight - (window.scrollY + window.innerHeight);
+    if (force || gap < 160) window.scrollTo(0, doc.scrollHeight);
+  }
 
   function complete(){
     if (stopped) return;
     stopped = true;
     clearInterval(hiddenTimer);
-    bubble.textContent = target;
-    scroll();
+    absorb(0);
+    head.data = target;
+    drawn = shown = target.length;
+    follow(false);
     if (resolveDone) resolveDone();
   }
 
-  // 描画フレームに同期して、小数単位で文字数を進める（毎フレーム1〜2文字＝なめらか）
+  // 描画フレームに同期して文字数を連続的に進める
   function frame(now){
     if (stopped) return;
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    if (shown < target.length) {
-      const behind = target.length - shown;
+    if (drawn < target.length) {
+      const behind = target.length - drawn;
       // 遅れの量に比例して速度を連続的に変える（段差を作らない）
       const rate = Math.max(30, Math.min(600, behind * (done ? 6 : 2)));
       shown = Math.min(target.length, shown + rate * dt);
-      bubble.textContent = target.slice(0, Math.floor(shown));
-      scroll(true);
+      const n = Math.floor(shown);
+      if (n > drawn) {                        // 文字が増えたときだけ描き換える
+        const s = document.createElement('span');
+        s.className = 'ink';
+        s.textContent = target.slice(drawn, n);
+        bubble.appendChild(s);
+        fading.push(s);
+        drawn = n;
+        absorb(16);
+        follow(false);
+      }
     } else if (done) {
       complete();
       return;
@@ -752,8 +789,9 @@ function typewriter(bubble){
   // 裏のタブでは描画フレームが止まるため、こちらで一気に表示して締める
   const hiddenTimer = setInterval(() => {
     if (document.hidden && target) {
-      shown = target.length;
-      bubble.textContent = target;
+      absorb(0);
+      head.data = target;
+      drawn = shown = target.length;
       if (done) complete();
     }
   }, 400);
