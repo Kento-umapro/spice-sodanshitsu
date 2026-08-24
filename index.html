@@ -757,7 +757,7 @@ function tidy(t){ return t.replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n'); 
    通信は塊で届くのでそのまま出すとカクつく。届いた文字をいったん
    貯めて、一定のリズムで少しずつ表示する。遅れが溜まったときだけ
    歩幅を広げて追いつく。                                        */
-function typewriter(bubble){
+function typewriter(bubble, opt = {}){
   bubble.textContent = '';
   const head = document.createTextNode('');   // 表示が確定した部分
   bubble.appendChild(head);
@@ -800,8 +800,11 @@ function typewriter(bubble){
     last = now;
     if (drawn < target.length) {
       const behind = target.length - drawn;
-      // 遅れの量に比例して速度を連続的に変える（段差を作らない）
-      const rate = Math.max(30, Math.min(600, behind * (done ? 6 : 2)));
+      // 作り置きは全文が最初から手元にあるので、一定の速さで打つ
+      // 通信中は、遅れの量に比例して速度を連続的に変える（段差を作らない）
+      const rate = opt.steady
+        ? opt.steady
+        : Math.max(10, Math.min(200, behind * (done ? 2 : 0.67)));
       shown = Math.min(target.length, shown + rate * dt);
       const n = Math.floor(shown);
       if (n > drawn) {                        // 文字が増えたときだけ描き換える
@@ -846,6 +849,9 @@ function resize(){
 }
 
 /* ══ 送信 ══════════════════════════════════════════════════ */
+const THINK_MS = 1500;   // 答え始めるまでの「考えている」時間
+const TYPE_CPS = 100;    // 作り置き再生の速さ（1秒あたりの文字数）
+
 /* ══ 作り置き回答 ════════════════════════════════════════════
    参考質問（チップ）から選ばれた1問目は、事前に作っておいた回答
    （1問5パターン）から1つ選んで表示する。APIを呼ばないので無料。
@@ -877,9 +883,9 @@ async function playCanned(text, a){
   S.busy = true; sendBtn.disabled = true;
   const bubble = addMessage(a.who, '');
   bubble.innerHTML = '<span class="dots"><span></span><span></span><span></span></span>';
-  await new Promise(r => setTimeout(r, 400 + Math.random() * 500));   // 少しだけ考える間
+  await new Promise(r => setTimeout(r, THINK_MS + Math.random() * 300));   // 考えている間
   bubble.textContent = '';
-  const tw = typewriter(bubble);
+  const tw = typewriter(bubble, { steady: TYPE_CPS });
   await tw.finish(a.text);
   S.history.push({ role:'assistant', content:a.text });
   S.busy = false; resize();
@@ -911,6 +917,7 @@ async function send(text){
   }
 
   S.busy = true; sendBtn.disabled = true;
+  const askedAt = Date.now();
 
   const guess = S.who === 'kaicho' ? 'kaicho' : 'shacho';
   const bubble = addMessage(guess, '');
@@ -988,7 +995,11 @@ async function send(text){
           }
         }
         if (tagged) {
-          if (!tw) { bubble.textContent = ''; tw = typewriter(bubble); }
+          if (!tw) {
+            const rest = THINK_MS - (Date.now() - askedAt);   // 考えている間を揃える
+            if (rest > 0) await new Promise(r => setTimeout(r, rest));
+            bubble.textContent = ''; tw = typewriter(bubble);
+          }
           tw.update(tidy(full));
         }
       }
