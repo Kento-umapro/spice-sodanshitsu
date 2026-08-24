@@ -518,7 +518,7 @@ dialog::backdrop{background:rgba(40,10,8,.5)}
   </div>
 </dialog>
 
-<script src="prompts.js?v=3e4df4f469"></script>
+<script src="prompts.js?v=4c9f2250b4"></script>
 <script>
 /* ══ 状態 ══════════════════════════════════════════════════ */
 const S = {
@@ -857,7 +857,14 @@ function cannedAnswer(text){
   if (!Array.isArray(list) || !list.length) return null;
   // 話者を指定しているときは、その人の作り置きだけを使う
   // （無ければ null を返してAIに答えてもらう＝別人が答える事故を防ぐ）
-  if (S.who === 'kaicho' || S.who === 'shacho') list = list.filter(a => a.who === S.who);
+  if (S.who === 'kaicho' || S.who === 'shacho') {
+    list = list.filter(a => a.who === S.who);
+  } else {
+    // おまかせのときは「どちらが答えるかAIが選んだ」回答だけを使う
+    // （落ち込んでいる相談に会長の数字が飛ばないように）
+    const routed = list.filter(a => a.auto);
+    if (routed.length) list = routed;
+  }
   if (!list.length) return null;
   return list[Math.floor(Math.random() * list.length)];
 }
