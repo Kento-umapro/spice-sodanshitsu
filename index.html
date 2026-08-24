@@ -853,8 +853,12 @@ function resize(){
 function cannedAnswer(text){
   const store = (window.CANNED || {})[S.mode];
   if (!store || S.history.length > 0) return null;   // 会話の途中では使わない
-  const list = store[text];
+  let list = store[text];
   if (!Array.isArray(list) || !list.length) return null;
+  // 話者を指定しているときは、その人の作り置きだけを使う
+  // （無ければ null を返してAIに答えてもらう＝別人が答える事故を防ぐ）
+  if (S.who === 'kaicho' || S.who === 'shacho') list = list.filter(a => a.who === S.who);
+  if (!list.length) return null;
   return list[Math.floor(Math.random() * list.length)];
 }
 
