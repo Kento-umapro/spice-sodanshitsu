@@ -804,7 +804,7 @@ function typewriter(bubble, opt = {}){
       // 通信中は、遅れの量に比例して速度を連続的に変える（段差を作らない）
       const rate = opt.steady
         ? opt.steady
-        : Math.max(8, Math.min(130, behind * (done ? 1.3 : 0.45)));
+        : Math.max(4, Math.min(65, behind * (done ? 0.65 : 0.23)));
       shown = Math.min(target.length, shown + rate * dt);
       const n = Math.floor(shown);
       if (n > drawn) {                        // 文字が増えたときだけ描き換える
@@ -850,7 +850,7 @@ function resize(){
 
 /* ══ 送信 ══════════════════════════════════════════════════ */
 const THINK_MS = 1500;   // 答え始めるまでの「考えている」時間
-const TYPE_CPS = 65;     // 作り置き再生の速さ（1秒あたりの文字数）
+const TYPE_CPS = 33;     // 作り置き再生の速さ（1秒あたりの文字数）
 
 /* ══ 作り置き回答 ════════════════════════════════════════════
    参考質問（チップ）から選ばれた1問目は、事前に作っておいた回答
