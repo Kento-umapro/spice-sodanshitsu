@@ -757,14 +757,38 @@ function tidy(t){ return t.replace(/[ \t]+$/gm, '').replace(/\n{3,}/g, '\n\n'); 
    通信は塊で届くのでそのまま出すとカクつく。届いた文字をいったん
    貯めて、一定のリズムで少しずつ表示する。遅れが溜まったときだけ
    歩幅を広げて追いつく。                                        */
+// 絵文字は内部的に複数の文字でできているので、「見た目の1文字」単位に分ける
+// （分けずに出すと ❤️ や 💦 が完成する前に □ のような文字が一瞬見えてしまう）
+const GRAPHEME = (typeof Intl !== 'undefined' && Intl.Segmenter)
+  ? new Intl.Segmenter('ja', { granularity: 'grapheme' })
+  : null;
+function splitChars(t){
+  if (GRAPHEME) return [...GRAPHEME.segment(t)].map(x => x.segment);
+  const out = [];                              // 古い端末向けの控え
+  for (const ch of t) {
+    const cp = ch.codePointAt(0);
+    const joins = cp === 0xFE0F || cp === 0xFE0E || cp === 0x200D || cp === 0x20E3 ||
+                  (cp >= 0x1F3FB && cp <= 0x1F3FF) || (cp >= 0x0300 && cp <= 0x036F);
+    if (out.length && (joins || out[out.length - 1].endsWith('\u200D'))) out[out.length - 1] += ch;
+    else out.push(ch);
+  }
+  return out;
+}
+
 function typewriter(bubble, opt = {}){
   bubble.textContent = '';
   const head = document.createTextNode('');   // 表示が確定した部分
   bubble.appendChild(head);
   const fading = [];                          // 出たばかりの文字（薄→濃にフェード中）
 
-  let target = '', shown = 0, drawn = 0, done = false, resolveDone = null;
+  let target = '', units = [], segOf = null;   // units = 見た目の1文字の配列
+  let shown = 0, drawn = 0, done = false, resolveDone = null;
   let stopped = false, last = performance.now();
+
+  function resegment(){                        // target が変わったときだけ分け直す
+    if (segOf === target) return;
+    segOf = target; units = splitChars(target);
+  }
 
   // フェードが終わった分は確定テキストに吸収して、要素を増やしすぎない
   function absorb(keep){
@@ -788,7 +812,7 @@ function typewriter(bubble, opt = {}){
     clearInterval(hiddenTimer);
     absorb(0);
     head.data = target;
-    drawn = shown = target.length;
+    resegment(); drawn = shown = units.length;
     follow(false);
     if (resolveDone) resolveDone();
   }
@@ -798,19 +822,20 @@ function typewriter(bubble, opt = {}){
     if (stopped) return;
     const dt = Math.min((now - last) / 1000, 0.1);
     last = now;
-    if (drawn < target.length) {
-      const behind = target.length - drawn;
+    resegment();
+    if (drawn < units.length) {
+      const behind = units.length - drawn;
       // 作り置きは全文が最初から手元にあるので、一定の速さで打つ
       // 通信中は、遅れの量に比例して速度を連続的に変える（段差を作らない）
       const rate = opt.steady
         ? opt.steady
         : Math.max(5, Math.min(78, behind * (done ? 0.78 : 0.28)));
-      shown = Math.min(target.length, shown + rate * dt);
+      shown = Math.min(units.length, shown + rate * dt);
       const n = Math.floor(shown);
       if (n > drawn) {                        // 文字が増えたときだけ描き換える
         const s = document.createElement('span');
         s.className = 'ink';
-        s.textContent = target.slice(drawn, n);
+        s.textContent = units.slice(drawn, n).join('');
         bubble.appendChild(s);
         fading.push(s);
         drawn = n;
@@ -830,7 +855,7 @@ function typewriter(bubble, opt = {}){
     if (document.hidden && target) {
       absorb(0);
       head.data = target;
-      drawn = shown = target.length;
+      resegment(); drawn = shown = units.length;
       if (done) complete();
     }
   }, 400);
